@@ -1,0 +1,13 @@
+# Rust
+target/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# pnpm local store (sandbox workaround)
+**/.pnpm-store-local/
+
+# Logs
+*.log
