@@ -1,0 +1,9 @@
+[package]
+name = "agentplex-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "AgentPlex 桌面执行引擎 (Rust)。T2 将选择性 copy-in Codex 的重叠 crate，本 crate 作为执行引擎入口占位。"
+
+[dependencies]
