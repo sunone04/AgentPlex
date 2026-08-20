@@ -11,3 +11,8 @@ dist/
 
 # Logs
 *.log
+
+# local gh CLI runtime state (fails to delete while CLI session holds it)
+.ghlocal/
+.ghappdata/
+.gh-tmp/
