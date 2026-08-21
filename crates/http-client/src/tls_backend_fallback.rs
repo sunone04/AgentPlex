@@ -135,6 +135,9 @@ fn has_retryable_tls_error(error: &(dyn Error + 'static)) -> bool {
         let is_macos_protocol_version_error = message.contains("bad protocol version");
         // Linux OpenSSL reports the peer's "tlsv1 alert protocol version".
         let is_linux_protocol_version_error = message.contains("tlsv1 alert protocol version");
+        // rustls reports a peer fatal alert as "received fatal alert: <name>".
+        let is_rustls_protocol_version_error =
+            message.contains("received fatal alert: protocolversion");
         // Windows Schannel may expose the protocol alert as a raw or formatted OS error. The
         // formatted-message matches matter because `native_tls::Error` forwards Display to the
         // inner `io::Error` without exposing it through `source()`, so the raw OS error code is
@@ -151,6 +154,7 @@ fn has_retryable_tls_error(error: &(dyn Error + 'static)) -> bool {
             || message.contains("0x80090326");
         if is_macos_protocol_version_error
             || is_linux_protocol_version_error
+            || is_rustls_protocol_version_error
             || is_schannel_protocol_version_error
         {
             recognized_negotiation_failure = true;

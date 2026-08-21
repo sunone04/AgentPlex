@@ -117,8 +117,8 @@ impl RouteAwareRequestError {
             return Some(RouteFailureClass::TlsError);
         }
 
-        let mut source: Option<&(dyn std::error::Error + 'static)> = Some(self);
-        while let Some(error) = source {
+        let mut work: Vec<&(dyn std::error::Error + 'static)> = vec![self];
+        while let Some(error) = work.pop() {
             if error.downcast_ref::<rustls::Error>().is_some()
                 || error.downcast_ref::<native_tls::Error>().is_some()
             {
@@ -127,7 +127,16 @@ impl RouteAwareRequestError {
             if error.to_string() == "tunnel error: proxy authorization required" {
                 return Some(RouteFailureClass::ProxyAuthenticationRequired);
             }
-            source = error.source();
+            if let Some(io_error) = error.downcast_ref::<std::io::Error>()
+                && let Some(inner) = io_error.get_ref()
+            {
+                // Modern io::Error::source() is transparent: it skips the boxed inner error.
+                // Descend into get_ref() so TLS errors wrapped in io::Error stay reachable.
+                work.push(inner);
+            }
+            if let Some(next) = error.source() {
+                work.push(next);
+            }
         }
 
         match self {

@@ -36,6 +36,8 @@ fn recognizes_platform_specific_tls_protocol_negotiation_failures() {
         ),
         ("Schannel protocol error 0x80090326", true),
         ("SCHANNEL PROTOCOL ERROR 0X80090326", true),
+        ("received fatal alert: ProtocolVersion", true),
+        ("RECEIVED FATAL ALERT: PROTOCOLVERSION", true),
         ("certificate validation failed: bad protocol version", false),
         ("bad protocol version: certificate has expired", false),
         (
@@ -103,6 +105,31 @@ fn certificate_errors_in_an_error_source_never_enable_fallback() {
 
         assert!(!has_retryable_tls_error(&error), "{message}");
     }
+}
+
+#[test]
+fn rustls_protocol_alert_is_detected_through_nested_io_error_layers() {
+    // rustls errors are boxed inside multiple io::Error layers. Modern
+    // io::Error::source() skips the boxed inner error, so detection must rely
+    // on the transparent Display delegation through each io::Error layer.
+    let rustls_error = rustls::Error::AlertReceived(rustls::AlertDescription::ProtocolVersion);
+    let inner: Box<dyn std::error::Error + Send + Sync> = Box::new(rustls_error);
+    let io2 = io::Error::new(io::ErrorKind::InvalidData, inner);
+    let outer: Box<dyn std::error::Error + Send + Sync> = Box::new(io2);
+    let io1 = io::Error::other(outer);
+
+    assert!(has_retryable_tls_error(&io1));
+}
+
+#[test]
+fn certificate_errors_remain_non_retryable_through_nested_io_error_layers() {
+    let rustls_error = rustls::Error::InvalidCertificate(rustls::CertificateError::UnknownIssuer);
+    let inner: Box<dyn std::error::Error + Send + Sync> = Box::new(rustls_error);
+    let io2 = io::Error::new(io::ErrorKind::InvalidData, inner);
+    let outer: Box<dyn std::error::Error + Send + Sync> = Box::new(io2);
+    let io1 = io::Error::other(outer);
+
+    assert!(!has_retryable_tls_error(&io1));
 }
 
 #[test]
